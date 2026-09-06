@@ -90,25 +90,12 @@ export function AuthProvider({ children }) {
   };
 
   const googleSignIn = async (defaultRole = 'contractor') => {
-    try {
-      const profile = await loginWithGooglePopup(defaultRole);
-      const finalUser = { ...profile, role: defaultRole };
-      setCurrentUser(finalUser);
-      setUserProfile(finalUser);
-      localStorage.setItem('equiphub_user', JSON.stringify(finalUser));
-      return finalUser;
-    } catch (err) {
-      const fallback = {
-        uid: `google-${Date.now()}`,
-        email: 'google@equiphub.com',
-        name: 'Google Partner',
-        role: defaultRole
-      };
-      setCurrentUser(fallback);
-      setUserProfile(fallback);
-      localStorage.setItem('equiphub_user', JSON.stringify(fallback));
-      return fallback;
-    }
+    const profile = await loginWithGooglePopup(defaultRole);
+    const finalUser = { ...profile, role: defaultRole };
+    setCurrentUser(finalUser);
+    setUserProfile(finalUser);
+    localStorage.setItem('equiphub_user', JSON.stringify(finalUser));
+    return finalUser;
   };
 
   const logout = async () => {

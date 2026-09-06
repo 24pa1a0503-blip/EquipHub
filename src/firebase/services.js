@@ -140,16 +140,8 @@ export async function loginWithGooglePopup(defaultRole = 'contractor') {
       return userData;
     }
   } catch (err) {
-    console.warn("Popup blocked or closed, activating fallback demo session:", err);
-    const mockUser = {
-      uid: `google-fallback-${Date.now()}`,
-      email: 'partner@google.com',
-      name: 'Google Partner',
-      role: defaultRole,
-      createdAt: new Date().toISOString()
-    };
-    localStorage.setItem('equiphub_user', JSON.stringify(mockUser));
-    return mockUser;
+    console.error("Google Auth error:", err);
+    throw err;
   }
 }
 
