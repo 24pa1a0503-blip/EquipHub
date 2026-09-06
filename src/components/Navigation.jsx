@@ -1,9 +1,14 @@
 import React from 'react';
+import { useAuth } from '../context/AuthContext';
 
-export default function Navigation({ activeScreen, navigateTo, userRole, setUserRole }) {
+export default function Navigation({ activeScreen, navigateTo, bookingsList = [] }) {
+  const { userProfile, userRole, switchRole, logout } = useAuth();
+
   if (activeScreen === 'splash' || activeScreen === 'onboarding' || activeScreen === 'login') {
     return null;
   }
+
+  const pendingCount = bookingsList.filter(b => b.status === 'pending').length;
 
   return (
     <>
@@ -19,11 +24,11 @@ export default function Navigation({ activeScreen, navigateTo, userRole, setUser
         <div className="flex items-center gap-2">
           {userRole && (
             <button
-              onClick={() => setUserRole(userRole === 'contractor' ? 'owner' : 'contractor')}
-              className="text-[11px] font-label-caps px-2 py-1 bg-surface-container-high rounded text-on-surface-variant uppercase border border-outline-variant/40"
-              title="Click to toggle profile role"
+              onClick={() => switchRole(userRole === 'contractor' ? 'owner' : 'contractor')}
+              className="text-[11px] font-label-caps px-2 py-1 bg-surface-container-high rounded text-on-surface-variant uppercase border border-outline-variant/40 font-bold"
+              title="Click to switch mode"
             >
-              {userRole === 'contractor' ? 'Contractor' : 'Owner'}
+              Mode: {userRole.toUpperCase()}
             </button>
           )}
           <div 
@@ -58,163 +63,237 @@ export default function Navigation({ activeScreen, navigateTo, userRole, setUser
             />
           </div>
           <div className="flex flex-col">
-            <div className="font-headline-md text-on-surface text-base font-bold">Industrial Ops</div>
+            <div className="font-headline-md text-on-surface text-base font-bold">
+              {userProfile?.name || 'Industrial Partner'}
+            </div>
             <div className="font-body-sm text-on-surface-variant text-xs">
-              {userRole === 'owner' ? 'Fleet Owner' : 'Heavy Duty Pro'}
+              {userRole === 'owner' ? 'Fleet Equipment Owner' : 'Contractor / PM'}
             </div>
             <button 
-              onClick={() => setUserRole(userRole === 'contractor' ? 'owner' : 'contractor')}
+              onClick={() => switchRole(userRole === 'contractor' ? 'owner' : 'contractor')}
               className="font-label-caps text-primary text-[11px] mt-1 text-left hover:underline flex items-center gap-1 font-bold"
             >
-              Verified Partner ({userRole.toUpperCase()})
+              Switch Role ({userRole.toUpperCase()})
             </button>
           </div>
         </div>
 
+        {/* Dynamic Role-Based Menu */}
         <nav className="flex-1 px-4 flex flex-col gap-1">
-          <button 
-            onClick={() => navigateTo('dashboard')} 
-            className={`flex items-center gap-4 px-4 py-3 rounded-r-full transition-all duration-200 text-left ${
-              activeScreen === 'dashboard' 
-                ? 'bg-primary-container text-on-primary-container font-bold shadow-sm' 
-                : 'text-on-surface-variant hover:bg-surface-container-high'
-            }`}
-          >
-            <span className="material-symbols-outlined">storefront</span>
-            <span className="font-label-caps">Marketplace</span>
-          </button>
+          {userRole === 'owner' ? (
+            /* OWNER MENU */
+            <>
+              <button 
+                onClick={() => navigateTo('dashboard')} 
+                className={`flex items-center gap-4 px-4 py-3 rounded-r-full transition-all duration-200 text-left ${
+                  activeScreen === 'dashboard' 
+                    ? 'bg-primary-container text-on-primary-container font-bold shadow-sm' 
+                    : 'text-on-surface-variant hover:bg-surface-container-high'
+                }`}
+              >
+                <span className="material-symbols-outlined">dashboard</span>
+                <span className="font-label-caps">Executive Dashboard</span>
+              </button>
+
+              <button 
+                onClick={() => navigateTo('fleet')} 
+                className={`flex items-center gap-4 px-4 py-3 rounded-r-full transition-all duration-200 text-left ${
+                  activeScreen === 'fleet' 
+                    ? 'bg-primary-container text-on-primary-container font-bold shadow-sm' 
+                    : 'text-on-surface-variant hover:bg-surface-container-high'
+                }`}
+              >
+                <span className="material-symbols-outlined">inventory</span>
+                <span className="font-label-caps">Fleet Studio (CRUD)</span>
+              </button>
+
+              <button 
+                onClick={() => navigateTo('requests')} 
+                className={`flex items-center justify-between px-4 py-3 rounded-r-full transition-all duration-200 text-left ${
+                  activeScreen === 'requests' 
+                    ? 'bg-primary-container text-on-primary-container font-bold shadow-sm' 
+                    : 'text-on-surface-variant hover:bg-surface-container-high'
+                }`}
+              >
+                <div className="flex items-center gap-4">
+                  <span className="material-symbols-outlined">pending_actions</span>
+                  <span className="font-label-caps">Booking Requests</span>
+                </div>
+                {pendingCount > 0 && (
+                  <span className="bg-error text-white text-xs px-2 py-0.5 rounded-full font-bold">
+                    {pendingCount}
+                  </span>
+                )}
+              </button>
+
+              <button 
+                onClick={() => navigateTo('analytics')} 
+                className={`flex items-center gap-4 px-4 py-3 rounded-r-full transition-all duration-200 text-left ${
+                  activeScreen === 'analytics' 
+                    ? 'bg-primary-container text-on-primary-container font-bold shadow-sm' 
+                    : 'text-on-surface-variant hover:bg-surface-container-high'
+                }`}
+              >
+                <span className="material-symbols-outlined">analytics</span>
+                <span className="font-label-caps">Analytics &amp; Revenue</span>
+              </button>
+            </>
+          ) : (
+            /* CONTRACTOR MENU */
+            <>
+              <button 
+                onClick={() => navigateTo('dashboard')} 
+                className={`flex items-center gap-4 px-4 py-3 rounded-r-full transition-all duration-200 text-left ${
+                  activeScreen === 'dashboard' 
+                    ? 'bg-primary-container text-on-primary-container font-bold shadow-sm' 
+                    : 'text-on-surface-variant hover:bg-surface-container-high'
+                }`}
+              >
+                <span className="material-symbols-outlined">storefront</span>
+                <span className="font-label-caps">Marketplace</span>
+              </button>
+
+              <button 
+                onClick={() => navigateTo('search')} 
+                className={`flex items-center gap-4 px-4 py-3 rounded-r-full transition-all duration-200 text-left ${
+                  activeScreen === 'search' 
+                    ? 'bg-primary-container text-on-primary-container font-bold shadow-sm' 
+                    : 'text-on-surface-variant hover:bg-surface-container-high'
+                }`}
+              >
+                <span className="material-symbols-outlined">tune</span>
+                <span className="font-label-caps">Search &amp; Filters</span>
+              </button>
+
+              <button 
+                onClick={() => navigateTo('bookings')} 
+                className={`flex items-center gap-4 px-4 py-3 rounded-r-full transition-all duration-200 text-left ${
+                  activeScreen === 'bookings' 
+                    ? 'bg-primary-container text-on-primary-container font-bold shadow-sm' 
+                    : 'text-on-surface-variant hover:bg-surface-container-high'
+                }`}
+              >
+                <span className="material-symbols-outlined">event_available</span>
+                <span className="font-label-caps">My Bookings</span>
+              </button>
+
+              <button 
+                onClick={() => navigateTo('tracking')} 
+                className={`flex items-center gap-4 px-4 py-3 rounded-r-full transition-all duration-200 text-left ${
+                  activeScreen === 'tracking' 
+                    ? 'bg-primary-container text-on-primary-container font-bold shadow-sm' 
+                    : 'text-on-surface-variant hover:bg-surface-container-high'
+                }`}
+              >
+                <span className="material-symbols-outlined">near_me</span>
+                <span className="font-label-caps">Live Tracking</span>
+              </button>
+            </>
+          )}
 
           <button 
-            onClick={() => navigateTo('search')} 
-            className={`flex items-center gap-4 px-4 py-3 rounded-r-full transition-all duration-200 text-left ${
-              activeScreen === 'search' 
-                ? 'bg-primary-container text-on-primary-container font-bold shadow-sm' 
-                : 'text-on-surface-variant hover:bg-surface-container-high'
-            }`}
-          >
-            <span className="material-symbols-outlined">tune</span>
-            <span className="font-label-caps">Search &amp; Filters</span>
-          </button>
-
-          <button 
-            onClick={() => navigateTo('bookings')} 
-            className={`flex items-center gap-4 px-4 py-3 rounded-r-full transition-all duration-200 text-left ${
-              activeScreen === 'bookings' 
-                ? 'bg-primary-container text-on-primary-container font-bold shadow-sm' 
-                : 'text-on-surface-variant hover:bg-surface-container-high'
-            }`}
-          >
-            <span className="material-symbols-outlined">event_available</span>
-            <span className="font-label-caps">My Bookings</span>
-          </button>
-
-          <button 
-            onClick={() => navigateTo('fleet')} 
-            className={`flex items-center gap-4 px-4 py-3 rounded-r-full transition-all duration-200 text-left ${
-              activeScreen === 'fleet' 
-                ? 'bg-primary-container text-on-primary-container font-bold shadow-sm' 
-                : 'text-on-surface-variant hover:bg-surface-container-high'
-            }`}
-          >
-            <span className="material-symbols-outlined">inventory</span>
-            <span className="font-label-caps">Fleet Manager</span>
-          </button>
-
-          <button 
-            onClick={() => navigateTo('analytics')} 
-            className={`flex items-center gap-4 px-4 py-3 rounded-r-full transition-all duration-200 text-left ${
-              activeScreen === 'analytics' 
-                ? 'bg-primary-container text-on-primary-container font-bold shadow-sm' 
-                : 'text-on-surface-variant hover:bg-surface-container-high'
-            }`}
-          >
-            <span className="material-symbols-outlined">analytics</span>
-            <span className="font-label-caps">Analytics &amp; Revenue</span>
-          </button>
-
-          <button 
-            onClick={() => navigateTo('tracking')} 
-            className={`flex items-center gap-4 px-4 py-3 rounded-r-full transition-all duration-200 text-left ${
-              activeScreen === 'tracking' 
-                ? 'bg-primary-container text-on-primary-container font-bold shadow-sm' 
-                : 'text-on-surface-variant hover:bg-surface-container-high'
-            }`}
-          >
-            <span className="material-symbols-outlined">near_me</span>
-            <span className="font-label-caps">Live Tracking</span>
-          </button>
-
-          <button 
-            onClick={() => navigateTo('login')} 
+            onClick={() => {
+              logout();
+              navigateTo('login');
+            }} 
             className="flex items-center gap-4 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high rounded-r-full transition-all duration-200 text-left mt-auto"
           >
             <span className="material-symbols-outlined">logout</span>
-            <span className="font-label-caps">Switch Profile</span>
+            <span className="font-label-caps">Sign Out</span>
           </button>
         </nav>
       </aside>
 
       {/* Mobile Bottom Navigation Bar */}
       <nav className="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-16 bg-surface px-4 pb-safe border-t-2 border-outline-variant shadow-lg">
-        <button 
-          onClick={() => navigateTo('dashboard')}
-          className={`flex flex-col items-center justify-center px-3 py-1 rounded-lg transition-transform ${
-            activeScreen === 'dashboard' || activeScreen === 'search' 
-              ? 'bg-primary-container text-on-primary-container font-bold scale-95' 
-              : 'text-on-surface-variant'
-          }`}
-        >
-          <span className="material-symbols-outlined">search</span>
-          <span className="font-label-caps text-[11px] mt-0.5">Explore</span>
-        </button>
+        {userRole === 'owner' ? (
+          <>
+            <button 
+              onClick={() => navigateTo('dashboard')}
+              className={`flex flex-col items-center justify-center px-3 py-1 rounded-lg transition-transform ${
+                activeScreen === 'dashboard' ? 'bg-primary-container text-on-primary-container font-bold scale-95' : 'text-on-surface-variant'
+              }`}
+            >
+              <span className="material-symbols-outlined">dashboard</span>
+              <span className="font-label-caps text-[11px] mt-0.5">Overview</span>
+            </button>
 
-        <button 
-          onClick={() => navigateTo('fleet')}
-          className={`flex flex-col items-center justify-center px-3 py-1 rounded-lg transition-transform ${
-            activeScreen === 'fleet' 
-              ? 'bg-primary-container text-on-primary-container font-bold scale-95' 
-              : 'text-on-surface-variant'
-          }`}
-        >
-          <span className="material-symbols-outlined">construction</span>
-          <span className="font-label-caps text-[11px] mt-0.5">Fleet</span>
-        </button>
+            <button 
+              onClick={() => navigateTo('fleet')}
+              className={`flex flex-col items-center justify-center px-3 py-1 rounded-lg transition-transform ${
+                activeScreen === 'fleet' ? 'bg-primary-container text-on-primary-container font-bold scale-95' : 'text-on-surface-variant'
+              }`}
+            >
+              <span className="material-symbols-outlined">inventory</span>
+              <span className="font-label-caps text-[11px] mt-0.5">Fleet</span>
+            </button>
 
-        <button 
-          onClick={() => navigateTo('analytics')}
-          className={`flex flex-col items-center justify-center px-3 py-1 rounded-lg transition-transform ${
-            activeScreen === 'analytics' 
-              ? 'bg-primary-container text-on-primary-container font-bold scale-95' 
-              : 'text-on-surface-variant'
-          }`}
-        >
-          <span className="material-symbols-outlined">analytics</span>
-          <span className="font-label-caps text-[11px] mt-0.5">Earnings</span>
-        </button>
+            <button 
+              onClick={() => navigateTo('requests')}
+              className={`flex flex-col items-center justify-center px-3 py-1 rounded-lg relative transition-transform ${
+                activeScreen === 'requests' ? 'bg-primary-container text-on-primary-container font-bold scale-95' : 'text-on-surface-variant'
+              }`}
+            >
+              <span className="material-symbols-outlined">pending_actions</span>
+              <span className="font-label-caps text-[11px] mt-0.5">Requests</span>
+              {pendingCount > 0 && (
+                <span className="absolute top-0 right-2 w-2 h-2 rounded-full bg-error" />
+              )}
+            </button>
 
-        <button 
-          onClick={() => navigateTo('bookings')}
-          className={`flex flex-col items-center justify-center px-3 py-1 rounded-lg transition-transform ${
-            activeScreen === 'bookings' 
-              ? 'bg-primary-container text-on-primary-container font-bold scale-95' 
-              : 'text-on-surface-variant'
-          }`}
-        >
-          <span className="material-symbols-outlined">event_available</span>
-          <span className="font-label-caps text-[11px] mt-0.5">Bookings</span>
-        </button>
+            <button 
+              onClick={() => navigateTo('analytics')}
+              className={`flex flex-col items-center justify-center px-3 py-1 rounded-lg transition-transform ${
+                activeScreen === 'analytics' ? 'bg-primary-container text-on-primary-container font-bold scale-95' : 'text-on-surface-variant'
+              }`}
+            >
+              <span className="material-symbols-outlined">analytics</span>
+              <span className="font-label-caps text-[11px] mt-0.5">Earnings</span>
+            </button>
+          </>
+        ) : (
+          <>
+            <button 
+              onClick={() => navigateTo('dashboard')}
+              className={`flex flex-col items-center justify-center px-3 py-1 rounded-lg transition-transform ${
+                activeScreen === 'dashboard' || activeScreen === 'search' ? 'bg-primary-container text-on-primary-container font-bold scale-95' : 'text-on-surface-variant'
+              }`}
+            >
+              <span className="material-symbols-outlined">search</span>
+              <span className="font-label-caps text-[11px] mt-0.5">Explore</span>
+            </button>
 
-        <button 
-          onClick={() => navigateTo('login')}
-          className={`flex flex-col items-center justify-center px-3 py-1 rounded-lg transition-transform ${
-            activeScreen === 'login' 
-              ? 'bg-primary-container text-on-primary-container font-bold scale-95' 
-              : 'text-on-surface-variant'
-          }`}
-        >
-          <span className="material-symbols-outlined">person</span>
-          <span className="font-label-caps text-[11px] mt-0.5">Profile</span>
-        </button>
+            <button 
+              onClick={() => navigateTo('search')}
+              className={`flex flex-col items-center justify-center px-3 py-1 rounded-lg transition-transform ${
+                activeScreen === 'search' ? 'bg-primary-container text-on-primary-container font-bold scale-95' : 'text-on-surface-variant'
+              }`}
+            >
+              <span className="material-symbols-outlined">construction</span>
+              <span className="font-label-caps text-[11px] mt-0.5">Fleet</span>
+            </button>
+
+            <button 
+              onClick={() => navigateTo('bookings')}
+              className={`flex flex-col items-center justify-center px-3 py-1 rounded-lg transition-transform ${
+                activeScreen === 'bookings' ? 'bg-primary-container text-on-primary-container font-bold scale-95' : 'text-on-surface-variant'
+              }`}
+            >
+              <span className="material-symbols-outlined">event_available</span>
+              <span className="font-label-caps text-[11px] mt-0.5">Bookings</span>
+            </button>
+
+            <button 
+              onClick={() => navigateTo('tracking')}
+              className={`flex flex-col items-center justify-center px-3 py-1 rounded-lg transition-transform ${
+                activeScreen === 'tracking' ? 'bg-primary-container text-on-primary-container font-bold scale-95' : 'text-on-surface-variant'
+              }`}
+            >
+              <span className="material-symbols-outlined">near_me</span>
+              <span className="font-label-caps text-[11px] mt-0.5">Track</span>
+            </button>
+          </>
+        )}
       </nav>
     </>
   );

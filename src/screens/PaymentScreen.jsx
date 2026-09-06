@@ -1,46 +1,57 @@
 import React, { useState } from 'react';
+import { createBookingDoc } from '../firebase/services';
+import { useAuth } from '../context/AuthContext';
 
 export default function PaymentScreen({ navigateTo, bookingDraft, bookingsList, setBookingsList }) {
+  const { userProfile } = useAuth();
+
   const [selectedMethod, setSelectedMethod] = useState('card');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
-  const [createdBookingId, setCreatedBookingId] = useState('EQ-8902-CAT');
+  const [createdBookingId, setCreatedBookingId] = useState('EQ-8902-HUB');
 
-  // Payment Form Data
+  // Form inputs
   const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
   const [cvv, setCvv] = useState('');
 
   const amountToPay = bookingDraft?.grandTotal || 1200;
   const equipmentName = bookingDraft?.equipment?.title || 'CAT 320 Excavator';
-  const durationText = bookingDraft ? `${bookingDraft.durationDays} Days (${bookingDraft.startDate} - ${bookingDraft.endDate})` : '3 Days (Oct 12 - Oct 15)';
+  const durationText = bookingDraft ? `${bookingDraft.durationDays} Days (${bookingDraft.startDate} to ${bookingDraft.endDate})` : '5 Days (Nov 01 to Nov 05)';
 
-  const handlePay = () => {
+  const handlePay = async () => {
     setIsProcessing(true);
-    setTimeout(() => {
-      const newBookingId = `EQ-${Math.floor(1000 + Math.random() * 9000)}-CAT`;
-      setCreatedBookingId(newBookingId);
 
-      const newBooking = {
-        id: newBookingId,
+    try {
+      const payload = {
         equipmentId: bookingDraft?.equipment?.id || 'cat-320',
         equipmentName: equipmentName,
-        provider: bookingDraft?.equipment?.owner || 'Industrial Ops LLC',
+        contractorId: userProfile?.uid || 'contractor-anon',
+        contractorName: userProfile?.name || 'Contractor Partner',
+        provider: bookingDraft?.equipment?.owner || 'Texas Heavy Ops Ltd.',
         startDate: bookingDraft?.startDate || '2023-11-01',
         endDate: bookingDraft?.endDate || '2023-11-05',
         durationDays: bookingDraft?.durationDays || 5,
         dailyRate: bookingDraft?.dailyRate || 450,
         totalAmount: amountToPay,
-        status: 'Confirmed',
-        image: bookingDraft?.equipment?.image || 'https://lh3.googleusercontent.com/aida-public/AB6AXuAf7C104YlflkPCQlIUmAQYgrtcqZl0xjrVpgfTnI5ol3d-MOYS97VLVFndHfXhanIWl48TWPjJ7IHB3MaYWFHl2W6VSZ--bYsuAaj5X1Prf_d0Z5JIUb8z-Qm1ZyjCz0DVrvpvH_26B4TXDN83EcwbdoasLZPZjdTC9XWeAzax-Tg7GmtyWHgypDzUBN3aMyJEm5hqn6oWd2lQZAjkOAb1X7mJbzOq4a7mO9oPQn9iwSNKI13R6SzC',
-        deliverySite: bookingDraft?.location || 'Dallas, TX 75001'
+        deliverySite: bookingDraft?.location || 'Dallas, TX 75001',
+        hasOperator: bookingDraft?.hasOperator || false,
+        paymentMethod: selectedMethod,
+        paymentStatus: 'paid',
+        image: bookingDraft?.equipment?.image || 'https://lh3.googleusercontent.com/aida-public/AB6AXuAf7C104YlflkPCQlIUmAQYgrtcqZl0xjrVpgfTnI5ol3d-MOYS97VLVFndHfXhanIWl48TWPjJ7IHB3MaYWFHl2W6VSZ--bYsuAaj5X1Prf_d0Z5JIUb8z-Qm1ZyjCz0DVrvpvH_26B4TXDN83EcwbdoasLZPZjdTC9XWeAzax-Tg7GmtyWHgypDzUBN3aMyJEm5hqn6oWd2lQZAjkOAb1X7mJbzOq4a7mO9oPQn9iwSNKI13R6SzC'
       };
 
+      const newBooking = await createBookingDoc(payload);
+      setCreatedBookingId(newBooking.id);
       setBookingsList(prev => [newBooking, ...prev]);
+
       setIsProcessing(false);
       setIsConfirmed(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 1500);
+    } catch (err) {
+      console.error("Error creating Firestore booking:", err);
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -73,7 +84,7 @@ export default function PaymentScreen({ navigateTo, bookingDraft, bookingsList, 
                   <span className="font-price-display font-bold text-lg">₹{amountToPay.toLocaleString()}</span>
                 </div>
                 <p className="font-body-sm text-xs text-on-surface-variant">Rental Duration: {durationText}</p>
-                <p className="font-body-sm text-[11px] text-on-surface-variant mt-1 italic">Inclusive of GST</p>
+                <p className="font-body-sm text-[11px] text-on-surface-variant mt-1 italic">Inclusive of GST &amp; Transport Fee</p>
               </div>
 
               <h3 className="font-headline-md text-base font-bold text-on-surface mb-4">Select Payment Method</h3>
@@ -102,18 +113,13 @@ export default function PaymentScreen({ navigateTo, bookingDraft, bookingsList, 
                       <div className="mt-4 flex flex-col gap-3 w-full animate-fade-in">
                         <div>
                           <label className="font-label-caps text-[11px] text-on-surface-variant block mb-1 uppercase font-bold">Card Number</label>
-                          <div className="relative">
-                            <span className="absolute inset-y-0 left-0 flex items-center pl-3">
-                              <span className="material-symbols-outlined text-on-surface-variant text-sm">credit_card</span>
-                            </span>
-                            <input 
-                              type="text" 
-                              value={cardNumber}
-                              onChange={(e) => setCardNumber(e.target.value)}
-                              placeholder="4532 8900 1234 5678"
-                              className="bg-surface border-2 border-outline-variant text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block w-full pl-10 p-2.5 outline-none"
-                            />
-                          </div>
+                          <input 
+                            type="text" 
+                            value={cardNumber}
+                            onChange={(e) => setCardNumber(e.target.value)}
+                            placeholder="4532 8900 1234 5678"
+                            className="bg-surface border-2 border-outline-variant text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block w-full p-2.5 outline-none"
+                          />
                         </div>
 
                         <div className="flex gap-3">
@@ -204,13 +210,10 @@ export default function PaymentScreen({ navigateTo, bookingDraft, bookingsList, 
                     ) : (
                       <>
                         <div className="loader" />
-                        <span>Processing Payment...</span>
+                        <span>Creating Booking in Firestore...</span>
                       </>
                     )}
                   </button>
-                  <p className="font-body-sm text-xs text-center text-on-surface-variant mt-2 flex items-center justify-center gap-1">
-                    <span className="material-symbols-outlined text-sm">verified_user</span> 256-bit SSL encryption
-                  </p>
                 </div>
               </form>
             </div>
@@ -220,29 +223,31 @@ export default function PaymentScreen({ navigateTo, bookingDraft, bookingsList, 
           <div className="w-full animate-fade-in">
             <div className="bg-surface-container-lowest border-2 border-outline-variant rounded-lg p-6 md:p-8 shadow-sm flex flex-col items-center text-center">
               <div className="w-20 h-20 bg-tertiary-fixed rounded-full flex items-center justify-center mb-4 shadow-sm text-on-tertiary-fixed">
-                <span className="material-symbols-outlined filled text-5xl" data-weight="fill">check_circle</span>
+                <span className="material-symbols-outlined filled text-5xl">check_circle</span>
               </div>
-              <h2 className="font-headline-lg text-2xl font-bold text-on-surface mb-2">Booking Confirmed!</h2>
+              <h2 className="font-headline-lg text-2xl font-bold text-on-surface mb-2">Booking Request Submitted!</h2>
               <p className="font-body-md text-on-surface-variant text-sm mb-6">
-                Your payment was successful and your heavy machinery is secured.
+                Your payment was verified. The equipment owner has received your site delivery request.
               </p>
 
               <div className="w-full bg-surface-container-low rounded-lg p-4 md:p-6 border border-outline-variant text-left mb-6 relative overflow-hidden">
                 <h3 className="font-label-caps text-xs text-on-surface-variant mb-4 uppercase font-bold border-b border-outline-variant pb-2">
-                  Booking Details
+                  Booking Summary
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="font-label-caps text-xs text-on-surface-variant block mb-1">Booking ID</span>
+                    <span className="font-label-caps text-xs text-on-surface-variant block mb-1">Booking Reference ID</span>
                     <span className="font-bold font-mono text-on-surface">{createdBookingId}</span>
+                  </div>
+                  <div>
+                    <span className="font-label-caps text-xs text-on-surface-variant block mb-1">Status</span>
+                    <span className="font-bold text-primary-container uppercase bg-primary-container/20 px-2 py-0.5 rounded text-xs">
+                      Pending Owner Approval
+                    </span>
                   </div>
                   <div>
                     <span className="font-label-caps text-xs text-on-surface-variant block mb-1">Equipment</span>
                     <span className="font-semibold text-on-surface">{equipmentName}</span>
-                  </div>
-                  <div>
-                    <span className="font-label-caps text-xs text-on-surface-variant block mb-1">Provider / Owner</span>
-                    <span className="font-semibold text-on-surface">Industrial Ops LLC</span>
                   </div>
                   <div>
                     <span className="font-label-caps text-xs text-on-surface-variant block mb-1">Rental Period</span>
@@ -257,7 +262,7 @@ export default function PaymentScreen({ navigateTo, bookingDraft, bookingsList, 
                   type="button" 
                   className="px-6 py-3 border-2 border-outline text-on-surface font-semibold rounded-lg hover:bg-surface-container transition-colors text-sm"
                 >
-                  View Receipt &amp; Bookings
+                  View My Bookings
                 </button>
                 <button 
                   onClick={() => navigateTo('tracking')}
@@ -265,7 +270,7 @@ export default function PaymentScreen({ navigateTo, bookingDraft, bookingsList, 
                   className="px-6 py-3 flex items-center justify-center gap-2 bg-on-background text-on-primary font-bold rounded-lg shadow-md hover:bg-inverse-surface transition-colors text-sm"
                 >
                   <span className="material-symbols-outlined">local_shipping</span>
-                  Track Delivery Live
+                  Track Live GPS
                 </button>
               </div>
             </div>

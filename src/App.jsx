@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Navigation from './components/Navigation';
 import SplashScreen from './screens/SplashScreen';
 import OnboardingScreen from './screens/OnboardingScreen';
 import LoginScreen from './screens/LoginScreen';
 import DashboardScreen from './screens/DashboardScreen';
+import OwnerDashboardScreen from './screens/OwnerDashboardScreen';
+import OwnerBookingRequestsScreen from './screens/OwnerBookingRequestsScreen';
 import SearchScreen from './screens/SearchScreen';
 import DetailsScreen from './screens/DetailsScreen';
 import BookingConfigScreen from './screens/BookingConfigScreen';
@@ -12,23 +15,38 @@ import MyBookingsScreen from './screens/MyBookingsScreen';
 import TrackingScreen from './screens/TrackingScreen';
 import FleetManagerScreen from './screens/FleetManagerScreen';
 import AnalyticsScreen from './screens/AnalyticsScreen';
+
+import { subscribeToEquipment, subscribeToBookings } from './firebase/services';
 import { INITIAL_EQUIPMENT, INITIAL_BOOKINGS } from './data/equipmentData';
 
-export default function App() {
+function MainApp() {
+  const { userProfile, userRole } = useAuth();
+
   const [activeScreen, setActiveScreen] = useState('splash');
   const [equipmentList, setEquipmentList] = useState(INITIAL_EQUIPMENT);
-  const [bookingsList, setBookingsList] = useState(() => {
-    const saved = localStorage.getItem('equiphub_bookings');
-    return saved ? JSON.parse(saved) : INITIAL_BOOKINGS;
-  });
+  const [bookingsList, setBookingsList] = useState(INITIAL_BOOKINGS);
   const [selectedEquipment, setSelectedEquipment] = useState(INITIAL_EQUIPMENT[0]);
   const [bookingDraft, setBookingDraft] = useState(null);
-  const [userRole, setUserRole] = useState('contractor');
 
-  // Save bookings to localStorage
+  // Subscribe to real-time Firestore equipment catalog
   useEffect(() => {
-    localStorage.setItem('equiphub_bookings', JSON.stringify(bookingsList));
-  }, [bookingsList]);
+    const unsub = subscribeToEquipment((items) => {
+      if (items && items.length > 0) {
+        setEquipmentList(items);
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  // Subscribe to real-time Firestore bookings
+  useEffect(() => {
+    const unsub = subscribeToBookings(userRole, userProfile?.uid, (items) => {
+      if (items && items.length > 0) {
+        setBookingsList(items);
+      }
+    });
+    return () => unsub();
+  }, [userRole, userProfile]);
 
   const navigateTo = (screenName) => {
     setActiveScreen(screenName);
@@ -37,12 +55,11 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-background text-on-background flex flex-col md:flex-row font-body-md w-full selection:bg-primary-container selection:text-on-primary-container">
-      {/* Navigation Layout (Drawer on desktop, bottom bar on mobile) */}
+      {/* Navigation Layout */}
       <Navigation 
         activeScreen={activeScreen} 
         navigateTo={navigateTo} 
-        userRole={userRole}
-        setUserRole={setUserRole}
+        bookingsList={bookingsList}
       />
 
       {/* Screen Router */}
@@ -56,16 +73,25 @@ export default function App() {
         )}
 
         {activeScreen === 'login' && (
-          <LoginScreen navigateTo={navigateTo} setUserRole={setUserRole} />
+          <LoginScreen navigateTo={navigateTo} />
         )}
 
+        {/* Dashboard Router based on Role */}
         {activeScreen === 'dashboard' && (
-          <DashboardScreen 
-            navigateTo={navigateTo} 
-            equipmentList={equipmentList} 
-            bookingsList={bookingsList}
-            setSelectedEquipment={setSelectedEquipment}
-          />
+          userRole === 'owner' ? (
+            <OwnerDashboardScreen 
+              navigateTo={navigateTo}
+              equipmentList={equipmentList}
+              bookingsList={bookingsList}
+            />
+          ) : (
+            <DashboardScreen 
+              navigateTo={navigateTo} 
+              equipmentList={equipmentList} 
+              bookingsList={bookingsList}
+              setSelectedEquipment={setSelectedEquipment}
+            />
+          )
         )}
 
         {activeScreen === 'search' && (
@@ -111,6 +137,14 @@ export default function App() {
           />
         )}
 
+        {activeScreen === 'requests' && (
+          <OwnerBookingRequestsScreen 
+            navigateTo={navigateTo}
+            bookingsList={bookingsList}
+            setBookingsList={setBookingsList}
+          />
+        )}
+
         {activeScreen === 'fleet' && (
           <FleetManagerScreen 
             navigateTo={navigateTo}
@@ -135,5 +169,13 @@ export default function App() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <MainApp />
+    </AuthProvider>
   );
 }

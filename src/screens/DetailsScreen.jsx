@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
+import { addReviewDoc } from '../firebase/services';
+import { useAuth } from '../context/AuthContext';
 
 export default function DetailsScreen({ navigateTo, equipment, setSelectedEquipment, setBookingDraft }) {
+  const { userProfile } = useAuth();
+
   const item = equipment || {
     id: 'cat-320',
     title: 'CAT 320 Hydraulic Excavator',
@@ -20,13 +24,28 @@ export default function DetailsScreen({ navigateTo, equipment, setSelectedEquipm
       tailSwing: '2.8 m',
       attachments: '36" Trenching Bucket, Thumb'
     },
-    description: 'Late model CAT 320 excavator in excellent condition. Perfect for medium to heavy duty earthmoving, trenching, and site preparation. Regularly serviced by dealer. Comes equipped with a hydraulic thumb for debris handling and a standard 36-inch bucket. Tier 4 Final emissions compliant engine suitable for all urban job sites.'
+    description: 'Late model CAT 320 excavator in excellent condition. Perfect for medium to heavy duty earthmoving, trenching, and site preparation.',
+    reviews: [
+      {
+        id: 'rev-1',
+        user: 'John D. Construction',
+        date: 'Oct 12, 2023',
+        rating: 5,
+        text: 'Machine arrived on time and fully fueled. The thumb attachment worked flawlessly for clearing concrete debris.'
+      }
+    ]
   };
 
   const [startDate, setStartDate] = useState('2023-11-01');
   const [endDate, setEndDate] = useState('2023-11-05');
   const [includeDelivery, setIncludeDelivery] = useState(true);
   const [zipCode, setZipCode] = useState('75001');
+
+  // Review Form State
+  const [newRating, setNewRating] = useState(5);
+  const [newComment, setNewComment] = useState('');
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   // Compute days duration dynamically
   const start = new Date(startDate);
@@ -57,10 +76,31 @@ export default function DetailsScreen({ navigateTo, equipment, setSelectedEquipm
     navigateTo('config');
   };
 
+  const handleAddReview = async (e) => {
+    e.preventDefault();
+    if (!newComment) return;
+    setSubmittingReview(true);
+
+    const reviewPayload = {
+      user: userProfile?.name || 'Contractor Partner',
+      date: new Date().toLocaleDateString(),
+      rating: Number(newRating),
+      text: newComment
+    };
+
+    await addReviewDoc(item.id, reviewPayload);
+    item.reviews = [reviewPayload, ...(item.reviews || [])];
+    item.reviewsCount = (item.reviewsCount || 0) + 1;
+
+    setSubmittingReview(false);
+    setShowReviewForm(false);
+    setNewComment('');
+  };
+
   return (
     <div className="bg-background text-on-background min-h-screen flex flex-col w-full">
       {/* Top Header Navigation */}
-      <header className="bg-surface sticky top-0 z-40 border-b border-outline-variant/30 px-margin-desktop py-4 max-w-[1280px] mx-auto w-full flex justify-between items-center px-4">
+      <header className="bg-surface sticky top-0 z-40 border-b border-outline-variant/30 px-4 md:px-margin-desktop py-4 max-w-[1280px] mx-auto w-full flex justify-between items-center">
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigateTo('search')}
@@ -84,7 +124,7 @@ export default function DetailsScreen({ navigateTo, equipment, setSelectedEquipm
       {/* Main Canvas */}
       <main className="flex-grow w-full max-w-[1280px] mx-auto px-4 md:px-margin-desktop py-6 pb-32 md:pb-16 grid grid-cols-1 lg:grid-cols-12 gap-gutter gap-8">
         {/* Left Column: Content & Specs */}
-        <div className="col-span-1 lg:col-span-8 space-y-stack-lg space-y-6">
+        <div className="col-span-1 lg:col-span-8 space-y-6">
           {/* Image Gallery */}
           <div className="relative w-full aspect-video md:aspect-[21/9] lg:aspect-[16/9] bg-surface-container rounded-xl overflow-hidden group shadow-sm">
             <img 
@@ -99,9 +139,9 @@ export default function DetailsScreen({ navigateTo, equipment, setSelectedEquipm
             </div>
           </div>
 
-          <div className="space-y-stack-lg space-y-6">
+          <div className="space-y-6">
             {/* Machine Header */}
-            <div className="space-y-stack-sm space-y-2">
+            <div className="space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <h1 className="font-headline-lg-mobile text-2xl md:text-3xl font-extrabold text-on-surface">
@@ -124,13 +164,13 @@ export default function DetailsScreen({ navigateTo, equipment, setSelectedEquipm
                   <span className="material-symbols-outlined text-primary-container" data-weight="fill">star</span>
                   <span className="font-bold text-on-surface">{item.rating}</span>
                   <span className="text-on-surface-variant underline decoration-outline-variant underline-offset-4 text-xs">
-                    ({item.reviewsCount} Reviews)
+                    ({item.reviewsCount || 124} Reviews)
                   </span>
                 </div>
                 <div className="w-px h-4 bg-outline-variant" />
                 <div className="flex items-center gap-2">
                   <img 
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuCund9hJwy5iaWLy-Hn6_dHTcPrepUlEfVZI2Fp6IIF1oj4Bh97rhmlgO35VfiGoyH9G0uB8tZ_mno3eny2sF4ALJ7QnFVashxl4wHVeaAVSmGcQesEcC1N7KlpbIcr-mLHCjqGv-tZmR74G5ewP6x12FIciFx7h25gQV0NEXXSdcYYDDg8KSh6bxMw9bBj6d75CFEBbVSSNRNUh8dH8ccwhglY5dIVYfRNE_u5EkGRLTEWfORP4BLI" 
+                    src={item.ownerAvatar || "https://lh3.googleusercontent.com/aida-public/AB6AXuCund9hJwy5iaWLy-Hn6_dHTcPrepUlEfVZI2Fp6IIF1oj4Bh97rhmlgO35VfiGoyH9G0uB8tZ_mno3eny2sF4ALJ7QnFVashxl4wHVeaAVSmGcQesEcC1N7KlpbIcr-mLHCjqGv-tZmR74G5ewP6x12FIciFx7h25gQV0NEXXSdcYYDDg8KSh6bxMw9bBj6d75CFEBbVSSNRNUh8dH8ccwhglY5dIVYfRNE_u5EkGRLTEWfORP4BLI"} 
                     alt="Owner Avatar"
                     className="w-6 h-6 rounded-full object-cover" 
                   />
@@ -141,49 +181,29 @@ export default function DetailsScreen({ navigateTo, equipment, setSelectedEquipm
 
             {/* Technical Specs Bento */}
             <div>
-              <h2 className="font-headline-md text-on-surface mb-stack-md mb-3 flex items-center gap-2 text-xl font-bold">
+              <h2 className="font-headline-md text-on-surface mb-3 flex items-center gap-2 text-xl font-bold">
                 <span className="material-symbols-outlined text-primary">engineering</span> Technical Specifications
               </h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-base gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="bg-surface-container-low p-4 rounded flex flex-col gap-1 border border-outline-variant/30">
                   <span className="material-symbols-outlined text-on-surface-variant mb-1">weight</span>
                   <span className="font-label-caps text-xs text-on-surface-variant uppercase">Operating Weight</span>
-                  <span className="font-body-lg font-bold text-on-surface">{item.specs.weight}</span>
+                  <span className="font-body-lg font-bold text-on-surface">{item.specs?.weight || '22,500 kg'}</span>
                 </div>
                 <div className="bg-surface-container-low p-4 rounded flex flex-col gap-1 border border-outline-variant/30">
                   <span className="material-symbols-outlined text-on-surface-variant mb-1">bolt</span>
                   <span className="font-label-caps text-xs text-on-surface-variant uppercase">Net Power</span>
-                  <span className="font-body-lg font-bold text-on-surface">{item.specs.power}</span>
+                  <span className="font-body-lg font-bold text-on-surface">{item.specs?.power || '172 HP'}</span>
                 </div>
                 <div className="bg-surface-container-low p-4 rounded flex flex-col gap-1 border border-outline-variant/30">
                   <span className="material-symbols-outlined text-on-surface-variant mb-1">architecture</span>
                   <span className="font-label-caps text-xs text-on-surface-variant uppercase">Max Dig Depth</span>
-                  <span className="font-body-lg font-bold text-on-surface">{item.specs.digDepth || 'N/A'}</span>
+                  <span className="font-body-lg font-bold text-on-surface">{item.specs?.digDepth || '6.7 m'}</span>
                 </div>
                 <div className="bg-surface-container-low p-4 rounded flex flex-col gap-1 border border-outline-variant/30">
                   <span className="material-symbols-outlined text-on-surface-variant mb-1">speed</span>
                   <span className="font-label-caps text-xs text-on-surface-variant uppercase">Engine Hours</span>
-                  <span className="font-body-lg font-bold text-on-surface">{item.specs.engineHours || '1,200 hrs'}</span>
-                </div>
-              </div>
-
-              {/* Zebra Striped Detailed Specs */}
-              <div className="mt-4 border border-outline-variant/50 rounded overflow-hidden text-sm">
-                <div className="flex justify-between items-center p-3 bg-surface text-on-surface border-b border-outline-variant/30">
-                  <span className="text-on-surface-variant">Fuel Capacity</span>
-                  <span className="font-semibold">{item.specs.fuelCapacity || '320 L'}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-surface-container-lowest text-on-surface border-b border-outline-variant/30">
-                  <span className="text-on-surface-variant">Max Reach at Ground Level</span>
-                  <span className="font-semibold">{item.specs.reachGround || '9.8 m'}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-surface text-on-surface border-b border-outline-variant/30">
-                  <span className="text-on-surface-variant">Tail Swing Radius</span>
-                  <span className="font-semibold">{item.specs.tailSwing || '2.8 m'}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-surface-container-lowest text-on-surface">
-                  <span className="text-on-surface-variant">Attachments Included</span>
-                  <span className="font-semibold">{item.specs.attachments}</span>
+                  <span className="font-body-lg font-bold text-on-surface">{item.specs?.engineHours || '2,450 hrs'}</span>
                 </div>
               </div>
             </div>
@@ -198,35 +218,74 @@ export default function DetailsScreen({ navigateTo, equipment, setSelectedEquipm
 
             {/* Reviews Section */}
             <div>
-              <h2 className="font-headline-md text-on-surface mb-4 flex items-center gap-2 text-xl font-bold">
-                <span className="material-symbols-outlined text-primary">forum</span> Recent Reviews
-              </h2>
-              <div className="space-y-4">
-                <div className="p-4 bg-surface-container-lowest border border-outline-variant/50 rounded">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold">
-                        JD
-                      </div>
-                      <div>
-                        <p className="font-body-sm font-bold text-on-surface text-sm">John D. Construction</p>
-                        <p className="font-body-sm text-on-surface-variant text-xs">Oct 12, 2023</p>
-                      </div>
-                    </div>
-                    <div className="flex text-primary-container">
-                      {[...Array(5)].map((_, i) => (
-                        <span key={i} className="material-symbols-outlined text-[16px]" data-weight="fill">star</span>
-                      ))}
-                    </div>
-                  </div>
-                  <p className="font-body-sm text-on-surface-variant text-xs leading-relaxed">
-                    Machine arrived on time and fully fueled. The thumb attachment worked flawlessly for clearing concrete debris. Will rent again for our next foundation dig.
-                  </p>
-                </div>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="font-headline-md text-on-surface flex items-center gap-2 text-xl font-bold">
+                  <span className="material-symbols-outlined text-primary">forum</span> Verified Contractor Reviews
+                </h2>
+                <button 
+                  onClick={() => setShowReviewForm(!showReviewForm)}
+                  className="bg-primary-container/20 text-on-primary-container font-label-caps text-xs font-bold px-3 py-1.5 rounded hover:bg-primary-container/30"
+                >
+                  {showReviewForm ? 'Cancel' : '+ Write Review'}
+                </button>
               </div>
-              <button className="mt-4 font-body-sm text-xs font-semibold text-primary underline underline-offset-4">
-                Read all {item.reviewsCount} reviews
-              </button>
+
+              {/* Review Submission Form */}
+              {showReviewForm && (
+                <form onSubmit={handleAddReview} className="mb-6 p-4 bg-surface-container-low border border-outline-variant rounded-lg flex flex-col gap-3 animate-fade-in">
+                  <h3 className="font-bold text-sm text-on-surface">Submit Machine Rating</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-on-surface-variant">Rating:</span>
+                    <select 
+                      value={newRating} 
+                      onChange={(e) => setNewRating(e.target.value)}
+                      className="bg-surface border border-outline-variant rounded p-1 text-xs outline-none"
+                    >
+                      <option value="5">5 ⭐⭐⭐⭐⭐ Excellent</option>
+                      <option value="4">4 ⭐⭐⭐⭐ Good</option>
+                      <option value="3">3 ⭐⭐⭐ Average</option>
+                    </select>
+                  </div>
+                  <textarea 
+                    rows="3"
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Describe machine performance on site..."
+                    className="w-full bg-surface border border-outline-variant rounded p-2.5 text-xs outline-none"
+                    required
+                  />
+                  <button 
+                    type="submit" 
+                    disabled={submittingReview}
+                    className="self-end bg-primary-container text-on-primary-container font-bold text-xs px-4 py-2 rounded hover:bg-inverse-primary"
+                  >
+                    {submittingReview ? 'Posting...' : 'Post Review'}
+                  </button>
+                </form>
+              )}
+
+              <div className="space-y-4">
+                {(item.reviews || [
+                  { id: '1', user: 'John D. Construction', date: 'Oct 12, 2023', rating: 5, text: 'Machine arrived on time and fully fueled. The thumb attachment worked flawlessly for clearing concrete debris.' }
+                ]).map((rev, idx) => (
+                  <div key={idx} className="p-4 bg-surface-container-lowest border border-outline-variant/50 rounded">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <p className="font-body-sm font-bold text-on-surface text-sm">{rev.user}</p>
+                        <p className="font-body-sm text-on-surface-variant text-xs">{rev.date}</p>
+                      </div>
+                      <div className="flex text-primary-container">
+                        {[...Array(rev.rating || 5)].map((_, i) => (
+                          <span key={i} className="material-symbols-outlined text-[16px]" data-weight="fill">star</span>
+                        ))}
+                      </div>
+                    </div>
+                    <p className="font-body-sm text-on-surface-variant text-xs leading-relaxed">
+                      {rev.text}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -263,7 +322,7 @@ export default function DetailsScreen({ navigateTo, equipment, setSelectedEquipm
                 </div>
               </div>
 
-              {/* Delivery Toggle/Calc */}
+              {/* Delivery Toggle */}
               <div className="bg-surface-container-low p-3 border border-outline-variant/50 rounded">
                 <div className="flex justify-between items-center mb-2">
                   <label className="font-body-sm text-xs font-semibold text-on-surface flex items-center gap-2 cursor-pointer">
@@ -299,11 +358,11 @@ export default function DetailsScreen({ navigateTo, equipment, setSelectedEquipm
                 <span>₹{rentalSubtotal.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-on-surface-variant underline decoration-dotted">Delivery &amp; Pickup (Roundtrip)</span>
+                <span className="text-on-surface-variant underline decoration-dotted">Delivery &amp; Pickup</span>
                 <span>₹{deliveryFee}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-on-surface-variant underline decoration-dotted">Damage Waiver (Optional)</span>
+                <span className="text-on-surface-variant underline decoration-dotted">Damage Waiver</span>
                 <span>₹{damageWaiver}</span>
               </div>
               <div className="w-full h-px bg-outline-variant/50 my-2" />
@@ -330,7 +389,7 @@ export default function DetailsScreen({ navigateTo, equipment, setSelectedEquipm
               </button>
             </div>
             <p className="text-center font-body-sm text-on-surface-variant mt-4 text-[11px]">
-              You won't be charged until the owner confirms.
+              Owner will review and approve your site delivery dates.
             </p>
           </div>
         </div>
