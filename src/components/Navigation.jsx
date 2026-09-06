@@ -2,7 +2,7 @@ import React from 'react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Navigation({ activeScreen, navigateTo, bookingsList = [] }) {
-  const { userProfile, userRole, switchRole, logout } = useAuth();
+  const { userProfile, userRole, logout } = useAuth();
 
   if (activeScreen === 'splash' || activeScreen === 'onboarding' || activeScreen === 'login') {
     return null;
@@ -21,16 +21,10 @@ export default function Navigation({ activeScreen, navigateTo, bookingsList = []
           <span className="material-symbols-outlined text-primary" data-weight="fill">location_on</span>
           <span className="font-headline-lg-mobile font-extrabold text-primary tracking-tighter">EquipHub</span>
         </div>
-        <div className="flex items-center gap-2">
-          {userRole && (
-            <button
-              onClick={() => switchRole(userRole === 'contractor' ? 'owner' : 'contractor')}
-              className="text-[11px] font-label-caps px-2 py-1 bg-surface-container-high rounded text-on-surface-variant uppercase border border-outline-variant/40 font-bold"
-              title="Click to switch mode"
-            >
-              Mode: {userRole.toUpperCase()}
-            </button>
-          )}
+        <div className="flex items-center gap-3">
+          <span className="text-[11px] font-label-caps px-2 py-0.5 bg-surface-container-high rounded text-on-surface-variant uppercase font-bold border border-outline-variant/40">
+            {userRole === 'owner' ? 'Owner' : 'Contractor'}
+          </span>
           <div 
             onClick={() => navigateTo('login')}
             className="w-8 h-8 rounded-full overflow-hidden border border-outline-variant cursor-pointer"
@@ -64,17 +58,12 @@ export default function Navigation({ activeScreen, navigateTo, bookingsList = []
           </div>
           <div className="flex flex-col">
             <div className="font-headline-md text-on-surface text-base font-bold">
-              {userProfile?.name || 'Industrial Partner'}
+              {userProfile?.name || (userRole === 'owner' ? 'Fleet Operations' : 'Contractor Partner')}
             </div>
-            <div className="font-body-sm text-on-surface-variant text-xs">
-              {userRole === 'owner' ? 'Fleet Equipment Owner' : 'Contractor / PM'}
+            <div className="font-body-sm text-on-surface-variant text-xs flex items-center gap-1 mt-0.5">
+              <span className="w-2 h-2 rounded-full bg-tertiary block" />
+              <span>{userRole === 'owner' ? 'Verified Fleet Owner' : 'Verified Contractor'}</span>
             </div>
-            <button 
-              onClick={() => switchRole(userRole === 'contractor' ? 'owner' : 'contractor')}
-              className="font-label-caps text-primary text-[11px] mt-1 text-left hover:underline flex items-center gap-1 font-bold"
-            >
-              Switch Role ({userRole.toUpperCase()})
-            </button>
           </div>
         </div>
 
@@ -104,7 +93,7 @@ export default function Navigation({ activeScreen, navigateTo, bookingsList = []
                 }`}
               >
                 <span className="material-symbols-outlined">inventory</span>
-                <span className="font-label-caps">Fleet Studio (CRUD)</span>
+                <span className="font-label-caps">Fleet Studio</span>
               </button>
 
               <button 

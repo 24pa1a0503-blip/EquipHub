@@ -13,41 +13,35 @@ export default function LoginScreen({ navigateTo }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleInstantLogin = async (role) => {
-    setErrorMsg('');
-    setLoading(true);
-    try {
-      const demoEmail = role === 'owner' ? 'owner@equiphub.com' : 'contractor@equiphub.com';
-      await login(demoEmail, 'password123', role);
-    } catch (err) {
-      switchRole(role);
-    } finally {
-      setLoading(false);
-      navigateTo('dashboard');
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
+
+    if (!email || !password) {
+      setErrorMsg('Please enter email address and password.');
+      return;
+    }
+
+    if (authMode === 'signup' && !name) {
+      setErrorMsg('Please enter your full name or company name.');
+      return;
+    }
+
     setLoading(true);
 
     try {
       if (authMode === 'signup') {
-        const userEmail = email || `${selectedRole}@equiphub.com`;
-        const userPass = password || 'password123';
-        const userName = name || (selectedRole === 'owner' ? 'Texas Heavy Equipment Co.' : 'John D. Construction');
-        await signup(userEmail, userPass, userName, selectedRole, phone);
+        await signup(email, password, name, selectedRole, phone);
       } else {
-        const userEmail = email || `${selectedRole}@equiphub.com`;
-        const userPass = password || 'password123';
-        await login(userEmail, userPass, selectedRole);
+        await login(email, password, selectedRole);
       }
-    } catch (err) {
       switchRole(selectedRole);
+      navigateTo('dashboard');
+    } catch (err) {
+      console.error("Authentication error:", err);
+      setErrorMsg(err.message || 'Authentication failed. Please check your credentials.');
     } finally {
       setLoading(false);
-      navigateTo('dashboard');
     }
   };
 
@@ -56,20 +50,22 @@ export default function LoginScreen({ navigateTo }) {
     setLoading(true);
     try {
       await googleSignIn(selectedRole);
-    } catch (err) {
       switchRole(selectedRole);
+      navigateTo('dashboard');
+    } catch (err) {
+      console.error("Google Auth error:", err);
+      setErrorMsg(err.message || 'Google sign-in failed.');
     } finally {
       setLoading(false);
-      navigateTo('dashboard');
     }
   };
 
   return (
     <div className="bg-background text-on-background antialiased min-h-screen flex flex-col items-center justify-center p-4 md:p-12 w-full">
       <main className="w-full max-w-4xl mx-auto flex flex-col md:flex-row gap-8 md:items-stretch">
-        {/* Authentication Form Box (Left/Top) */}
-        <section className="flex-1 bg-surface-container-lowest border border-outline-variant rounded-lg p-6 md:p-8 shadow-sm flex flex-col justify-center">
-          <div className="mb-4 text-center md:text-left">
+        {/* Authentication Form (Left) */}
+        <section className="flex-1 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 md:p-8 shadow-sm flex flex-col justify-center">
+          <div className="mb-6 text-center md:text-left">
             <h1 
               onClick={() => navigateTo('dashboard')}
               className="font-headline-lg-mobile md:font-headline-lg font-extrabold tracking-tighter mb-1 text-3xl md:text-4xl text-primary cursor-pointer"
@@ -77,40 +73,17 @@ export default function LoginScreen({ navigateTo }) {
               EquipHub
             </h1>
             <p className="font-body-md text-on-surface-variant text-sm">
-              {authMode === 'signin' ? 'Access your heavy rental portal.' : 'Create your EquipHub account.'}
+              {authMode === 'signin' ? 'Access your heavy equipment rental portal.' : 'Create your verified EquipHub account.'}
             </p>
           </div>
 
-          {/* Quick Demo Access Buttons */}
-          <div className="mb-4 p-3 bg-surface-container-low border border-outline-variant/60 rounded-lg flex flex-col gap-2">
-            <span className="font-label-caps text-[11px] text-on-surface-variant uppercase font-bold">1-Click Instant Demo Login:</span>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleInstantLogin('contractor')}
-                className="py-2.5 px-3 bg-primary-container text-on-primary-container font-bold text-xs rounded hover:bg-inverse-primary transition-colors flex items-center justify-center gap-1 shadow-sm cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-sm">construction</span>
-                Contractor View
-              </button>
-              <button
-                type="button"
-                onClick={() => handleInstantLogin('owner')}
-                className="py-2.5 px-3 bg-on-background text-on-primary font-bold text-xs rounded hover:bg-inverse-surface transition-colors flex items-center justify-center gap-1 shadow-sm cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-sm">precision_manufacturing</span>
-                Owner Studio
-              </button>
-            </div>
-          </div>
-
           {/* Mode Tabs */}
-          <div className="flex border-b border-outline-variant mb-4">
+          <div className="flex border-b border-outline-variant mb-6">
             <button
               type="button"
               onClick={() => { setAuthMode('signin'); setErrorMsg(''); }}
-              className={`flex-1 py-2 font-label-caps text-xs font-bold text-center border-b-2 transition-colors ${
-                authMode === 'signin' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant'
+              className={`flex-1 py-2.5 font-label-caps text-xs font-bold text-center border-b-2 transition-colors ${
+                authMode === 'signin' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'
               }`}
             >
               Sign In
@@ -118,8 +91,8 @@ export default function LoginScreen({ navigateTo }) {
             <button
               type="button"
               onClick={() => { setAuthMode('signup'); setErrorMsg(''); }}
-              className={`flex-1 py-2 font-label-caps text-xs font-bold text-center border-b-2 transition-colors ${
-                authMode === 'signup' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant'
+              className={`flex-1 py-2.5 font-label-caps text-xs font-bold text-center border-b-2 transition-colors ${
+                authMode === 'signup' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'
               }`}
             >
               Create Account
@@ -127,21 +100,22 @@ export default function LoginScreen({ navigateTo }) {
           </div>
 
           {errorMsg && (
-            <div className="mb-4 p-3 bg-error-container text-on-error-container text-xs rounded border border-error/30">
+            <div className="mb-4 p-3 bg-error-container text-on-error-container text-xs rounded border border-error/30 font-medium">
               {errorMsg}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {authMode === 'signup' && (
               <div className="flex flex-col gap-1">
-                <label className="font-label-caps text-xs font-bold uppercase text-on-surface">Full Name / Company</label>
+                <label className="font-label-caps text-xs font-bold uppercase text-on-surface">Full Name / Company Name</label>
                 <input 
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Texas Heavy Ops"
-                  className="recessed-field border-2 border-transparent focus:border-secondary rounded px-3 py-2.5 text-sm text-on-surface w-full outline-none"
+                  placeholder="e.g. Apex Heavy Operations Ltd."
+                  className="recessed-field border-2 border-transparent focus:border-secondary rounded px-3.5 py-3 text-sm text-on-surface w-full outline-none"
+                  required
                 />
               </div>
             )}
@@ -153,7 +127,8 @@ export default function LoginScreen({ navigateTo }) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="partner@equiphub.com"
-                className="recessed-field border-2 border-transparent focus:border-secondary rounded px-3 py-2.5 text-sm text-on-surface w-full outline-none"
+                className="recessed-field border-2 border-transparent focus:border-secondary rounded px-3.5 py-3 text-sm text-on-surface w-full outline-none"
+                required
               />
             </div>
 
@@ -164,18 +139,32 @@ export default function LoginScreen({ navigateTo }) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="recessed-field border-2 border-transparent focus:border-secondary rounded px-3 py-2.5 text-sm text-on-surface w-full outline-none"
+                className="recessed-field border-2 border-transparent focus:border-secondary rounded px-3.5 py-3 text-sm text-on-surface w-full outline-none"
+                required
               />
             </div>
 
-            {/* Role Selection */}
+            {authMode === 'signup' && (
+              <div className="flex flex-col gap-1">
+                <label className="font-label-caps text-xs font-bold uppercase text-on-surface">Mobile Contact Number</label>
+                <input 
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+91 9876543210"
+                  className="recessed-field border-2 border-transparent focus:border-secondary rounded px-3.5 py-3 text-sm text-on-surface w-full outline-none"
+                />
+              </div>
+            )}
+
+            {/* Profile Role Selector */}
             <div className="flex flex-col gap-1 mt-1">
-              <label className="font-label-caps text-xs font-bold uppercase text-on-surface">Target Dashboard Mode</label>
-              <div className="grid grid-cols-2 gap-2">
+              <label className="font-label-caps text-xs font-bold uppercase text-on-surface">Account Profile Profile</label>
+              <div className="grid grid-cols-2 gap-2 mt-1">
                 <button
                   type="button"
                   onClick={() => setSelectedRole('contractor')}
-                  className={`p-2 rounded border text-xs font-bold font-label-caps text-center transition-all ${
+                  className={`p-2.5 rounded border text-xs font-bold font-label-caps text-center transition-all ${
                     selectedRole === 'contractor' 
                       ? 'bg-primary-container text-on-primary-container border-primary shadow-sm' 
                       : 'bg-surface border-outline-variant text-on-surface-variant'
@@ -186,7 +175,7 @@ export default function LoginScreen({ navigateTo }) {
                 <button
                   type="button"
                   onClick={() => setSelectedRole('owner')}
-                  className={`p-2 rounded border text-xs font-bold font-label-caps text-center transition-all ${
+                  className={`p-2.5 rounded border text-xs font-bold font-label-caps text-center transition-all ${
                     selectedRole === 'owner' 
                       ? 'bg-primary-container text-on-primary-container border-primary shadow-sm' 
                       : 'bg-surface border-outline-variant text-on-surface-variant'
@@ -205,12 +194,12 @@ export default function LoginScreen({ navigateTo }) {
               {loading ? (
                 <div className="loader" />
               ) : (
-                authMode === 'signin' ? 'Sign In & Launch Dashboard' : 'Complete Account Registration'
+                authMode === 'signin' ? 'Sign In' : 'Create Account'
               )}
             </button>
           </form>
 
-          <div className="my-3 flex items-center gap-2">
+          <div className="my-4 flex items-center gap-2">
             <div className="h-px bg-outline-variant flex-1" />
             <span className="font-label-caps text-xs text-on-surface-variant uppercase">OR</span>
             <div className="h-px bg-outline-variant flex-1" />
@@ -220,30 +209,31 @@ export default function LoginScreen({ navigateTo }) {
             type="button"
             onClick={handleGoogleAuth}
             disabled={loading}
-            className="bg-surface border-2 border-outline-variant rounded-lg py-2.5 px-4 font-semibold text-on-surface flex items-center justify-center gap-2 hover:bg-surface-container-low transition-colors w-full text-xs cursor-pointer"
+            className="bg-surface border-2 border-outline-variant rounded-lg py-3 px-4 font-semibold text-on-surface flex items-center justify-center gap-2 hover:bg-surface-container-low transition-colors w-full text-xs cursor-pointer"
           >
             <span className="material-symbols-outlined text-on-surface">login</span>
             Continue with Google
           </button>
         </section>
 
-        {/* Profile Experience Cards (Right/Bottom) */}
+        {/* Profile Info Cards (Right) */}
         <section className="flex-1 flex flex-col gap-4">
           <div className="text-center md:text-left">
             <h2 className="font-headline-md text-xl font-bold text-on-surface mb-1">
-              Select Your Operational Profile
+              Operational Profiles
             </h2>
             <p className="font-body-sm text-on-surface-variant text-xs">
-              Click either profile below to instantly launch your personalized interactive workflow:
+              Select your role during sign-up to unlock your tailored workspace:
             </p>
           </div>
 
           <div className="flex flex-col gap-4 h-full justify-center">
             {/* Contractor Card */}
-            <button 
-              type="button"
-              onClick={() => handleInstantLogin('contractor')}
-              className="industrial-card rounded-lg p-5 border-2 border-transparent hover:border-primary-container transition-all text-left flex flex-col gap-2 group cursor-pointer shadow-md w-full"
+            <div 
+              onClick={() => setSelectedRole('contractor')}
+              className={`industrial-card rounded-xl p-5 border-2 transition-all text-left flex flex-col gap-2 group cursor-pointer shadow-md ${
+                selectedRole === 'contractor' ? 'border-primary-container ring-2 ring-primary-container/40' : 'border-transparent'
+              }`}
             >
               <div className="flex items-center gap-3">
                 <div className="bg-surface-tint/20 p-2.5 rounded-full text-primary-container">
@@ -251,22 +241,20 @@ export default function LoginScreen({ navigateTo }) {
                 </div>
                 <div>
                   <h3 className="font-bold text-base text-white">Contractor Profile</h3>
-                  <span className="text-[11px] text-primary-container font-label-caps font-bold uppercase">RENT &amp; TRACK MACHINERY</span>
+                  <span className="text-[11px] text-primary-container font-label-caps font-bold uppercase">RENT &amp; MANAGE MACHINERY</span>
                 </div>
               </div>
               <p className="text-xs text-secondary-fixed-dim leading-relaxed">
-                Browse nearby equipment, compare daily rates in ₹, configure operators, checkout securely, and track GPS delivery live.
+                Find available equipment near site, compare daily rates in ₹, add certified operators, checkout securely, and track GPS delivery live.
               </p>
-              <div className="pt-2 flex items-center text-primary-container font-label-caps text-xs font-bold group-hover:translate-x-1 transition-transform">
-                Launch Contractor Dashboard <span className="material-symbols-outlined ml-1 text-xs">arrow_forward</span>
-              </div>
-            </button>
+            </div>
 
             {/* Owner Card */}
-            <button 
-              type="button"
-              onClick={() => handleInstantLogin('owner')}
-              className="industrial-card rounded-lg p-5 border-2 border-transparent hover:border-primary-container transition-all text-left flex flex-col gap-2 group cursor-pointer shadow-md w-full"
+            <div 
+              onClick={() => setSelectedRole('owner')}
+              className={`industrial-card rounded-xl p-5 border-2 transition-all text-left flex flex-col gap-2 group cursor-pointer shadow-md ${
+                selectedRole === 'owner' ? 'border-primary-container ring-2 ring-primary-container/40' : 'border-transparent'
+              }`}
             >
               <div className="flex items-center gap-3">
                 <div className="bg-surface-tint/20 p-2.5 rounded-full text-primary-container">
@@ -278,12 +266,9 @@ export default function LoginScreen({ navigateTo }) {
                 </div>
               </div>
               <p className="text-xs text-secondary-fixed-dim leading-relaxed">
-                List machinery assets (CRUD), review pending contractor booking requests, approve or dispatch machines to site, and track revenue analytics.
+                List machinery assets in Firestore, review contractor booking applications, approve or dispatch machines, and view revenue analytics.
               </p>
-              <div className="pt-2 flex items-center text-primary-container font-label-caps text-xs font-bold group-hover:translate-x-1 transition-transform">
-                Launch Owner Studio <span className="material-symbols-outlined ml-1 text-xs">arrow_forward</span>
-              </div>
-            </button>
+            </div>
           </div>
         </section>
       </main>

@@ -1,11 +1,11 @@
 import React from 'react';
 
-export default function OwnerDashboardScreen({ navigateTo, equipmentList, bookingsList }) {
+export default function OwnerDashboardScreen({ navigateTo, equipmentList = [], bookingsList = [] }) {
   // Pending bookings requiring owner approval
   const pendingRequests = bookingsList.filter(b => b.status === 'pending');
   const activeBookings = bookingsList.filter(b => b.status === 'confirmed' || b.status === 'dispatched' || b.status === 'delivered' || b.status === 'Active');
 
-  const totalEarnings = bookingsList.reduce((acc, curr) => acc + (curr.totalAmount || 0), 184500);
+  const totalEarnings = bookingsList.reduce((acc, curr) => acc + (curr.totalAmount || 0), 0);
 
   return (
     <main className="flex-grow px-4 md:px-margin-desktop py-6 pb-32 max-w-6xl mx-auto w-full">
@@ -14,14 +14,14 @@ export default function OwnerDashboardScreen({ navigateTo, equipmentList, bookin
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="bg-primary/10 text-primary font-label-caps text-xs px-2 py-0.5 rounded font-bold uppercase">
-              Owner Dashboard
+              Owner Studio
             </span>
           </div>
           <h1 className="font-display-lg text-2xl md:text-3xl font-extrabold text-on-surface">
-            Welcome, Industrial Fleet Owner
+            Equipment Owner Workspace
           </h1>
           <p className="font-body-md text-on-surface-variant text-sm mt-1">
-            Monitor incoming rental requests, asset dispatch status, and revenue analytics.
+            Manage your fleet inventory, review rental applications, and track live payouts.
           </p>
         </div>
 
@@ -52,7 +52,7 @@ export default function OwnerDashboardScreen({ navigateTo, equipmentList, bookin
             </div>
             <div>
               <h3 className="font-bold text-on-surface text-base">
-                {pendingRequests.length} Pending Booking {pendingRequests.length === 1 ? 'Request' : 'Requests'}
+                {pendingRequests.length} Pending Rental {pendingRequests.length === 1 ? 'Application' : 'Applications'}
               </h3>
               <p className="text-xs text-on-surface-variant">
                 Contractors are waiting for your approval to confirm site dispatch.
@@ -71,11 +71,11 @@ export default function OwnerDashboardScreen({ navigateTo, equipmentList, bookin
       {/* Key Metric Tiles */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-surface-container-lowest border border-outline-variant p-4 rounded-lg flex flex-col justify-between shadow-sm">
-          <span className="font-label-caps text-xs text-on-surface-variant uppercase font-bold">Total Revenue</span>
+          <span className="font-label-caps text-xs text-on-surface-variant uppercase font-bold">Gross Revenue</span>
           <span className="font-display-lg text-2xl md:text-3xl font-extrabold text-on-surface mt-2">
             ₹{totalEarnings.toLocaleString()}
           </span>
-          <span className="text-[11px] text-tertiary font-bold mt-1">↑ +14.2% this month</span>
+          <span className="text-[11px] text-on-surface-variant mt-1">Live Firestore Yield</span>
         </div>
 
         <div className="bg-surface-container-lowest border border-outline-variant p-4 rounded-lg flex flex-col justify-between shadow-sm">
@@ -91,7 +91,7 @@ export default function OwnerDashboardScreen({ navigateTo, equipmentList, bookin
           <span className="font-display-lg text-2xl md:text-3xl font-extrabold text-tertiary mt-2">
             {activeBookings.length}
           </span>
-          <span className="text-[11px] text-on-surface-variant mt-1">Dispatched to job sites</span>
+          <span className="text-[11px] text-on-surface-variant mt-1">On contractor job sites</span>
         </div>
 
         <div className="bg-surface-container-lowest border border-outline-variant p-4 rounded-lg flex flex-col justify-between shadow-sm">
@@ -99,7 +99,7 @@ export default function OwnerDashboardScreen({ navigateTo, equipmentList, bookin
           <span className="font-display-lg text-2xl md:text-3xl font-extrabold text-on-surface mt-2">
             {equipmentList.length}
           </span>
-          <span className="text-[11px] text-on-surface-variant mt-1">Yard inventory</span>
+          <span className="text-[11px] text-on-surface-variant mt-1">In Firestore Fleet</span>
         </div>
       </div>
 
@@ -108,38 +108,52 @@ export default function OwnerDashboardScreen({ navigateTo, equipmentList, bookin
         {/* Managed Equipment Quick View */}
         <div className="col-span-1 lg:col-span-7 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-sm">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="font-headline-md text-lg font-bold text-on-surface">Your Fleet Inventory</h2>
+            <h2 className="font-headline-md text-lg font-bold text-on-surface">Your Listed Fleet</h2>
             <button 
               onClick={() => navigateTo('fleet')}
               className="text-xs text-primary font-bold hover:underline"
             >
-              Manage All
+              + Add Machine
             </button>
           </div>
 
-          <div className="space-y-3">
-            {equipmentList.slice(0, 4).map(item => (
-              <div key={item.id} className="flex items-center justify-between p-3 bg-surface-container-low rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-surface-container rounded overflow-hidden border border-outline-variant shrink-0">
-                    <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+          {equipmentList.length === 0 ? (
+            <div className="p-8 text-center bg-surface-container-low border border-dashed border-outline-variant rounded-lg flex flex-col items-center">
+              <span className="material-symbols-outlined text-4xl text-on-surface-variant mb-2">add_box</span>
+              <h3 className="font-bold text-sm text-on-surface">No Equipment Listed Yet</h3>
+              <p className="text-xs text-on-surface-variant mb-4">Add your heavy machinery to start receiving rental booking applications.</p>
+              <button 
+                onClick={() => navigateTo('fleet')}
+                className="bg-primary-container text-on-primary-container font-bold text-xs px-4 py-2 rounded-lg"
+              >
+                + Add First Asset
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {equipmentList.slice(0, 4).map(item => (
+                <div key={item.id} className="flex items-center justify-between p-3 bg-surface-container-low rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-surface-container rounded overflow-hidden border border-outline-variant shrink-0">
+                      <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-xs text-on-surface">{item.title}</div>
+                      <div className="text-[11px] text-on-surface-variant">{item.location}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="font-bold text-xs text-on-surface">{item.title}</div>
-                    <div className="text-[11px] text-on-surface-variant">{item.location}</div>
+                  <div className="text-right">
+                    <div className="font-bold text-sm text-on-surface">₹{item.dailyRate}/day</div>
+                    <span className={`text-[10px] font-label-caps font-bold uppercase px-2 py-0.5 rounded ${
+                      item.available ? 'bg-tertiary/10 text-tertiary' : 'bg-primary-container/20 text-on-primary-container'
+                    }`}>
+                      {item.available ? 'Available' : 'Occupied'}
+                    </span>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="font-bold text-sm text-on-surface">₹{item.dailyRate}/day</div>
-                  <span className={`text-[10px] font-label-caps font-bold uppercase px-2 py-0.5 rounded ${
-                    item.available ? 'bg-tertiary/10 text-tertiary' : 'bg-primary-container/20 text-on-primary-container'
-                  }`}>
-                    {item.available ? 'Available' : 'Occupied'}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Quick Analytics Summary */}
@@ -151,18 +165,20 @@ export default function OwnerDashboardScreen({ navigateTo, equipmentList, bookin
                 onClick={() => navigateTo('analytics')}
                 className="text-xs text-primary font-bold hover:underline"
               >
-                View Full Analytics
+                Full Analytics
               </button>
             </div>
             <p className="text-xs text-on-surface-variant leading-relaxed mb-4">
-              Your equipment utilization rate is currently **78.5%**. Heavy Excavators represent 62% of overall rental earnings this month.
+              All bookings, rentals, and transactions are synchronized in real-time with Cloud Firestore.
             </p>
           </div>
 
           <div className="bg-surface-container p-4 rounded-lg border border-outline-variant/30 flex justify-between items-center">
             <div>
-              <div className="text-xs text-on-surface-variant font-bold uppercase">Target Yield</div>
-              <div className="text-lg font-bold text-on-surface">₹2,50,000 / mo</div>
+              <div className="text-xs text-on-surface-variant font-bold uppercase">Firestore Status</div>
+              <div className="text-sm font-bold text-tertiary flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse" /> Live Real-Time DB
+              </div>
             </div>
             <button 
               onClick={() => navigateTo('analytics')}
