@@ -19,14 +19,11 @@ export default function LoginScreen({ navigateTo }) {
     try {
       const demoEmail = role === 'owner' ? 'owner@equiphub.com' : 'contractor@equiphub.com';
       await login(demoEmail, 'password123', role);
-      switchRole(role);
-      navigateTo('dashboard');
     } catch (err) {
-      console.error("Demo login notice:", err);
       switchRole(role);
-      navigateTo('dashboard');
     } finally {
       setLoading(false);
+      navigateTo('dashboard');
     }
   };
 
@@ -37,25 +34,20 @@ export default function LoginScreen({ navigateTo }) {
 
     try {
       if (authMode === 'signup') {
-        const userEmail = email || 'partner@equiphub.com';
+        const userEmail = email || `${selectedRole}@equiphub.com`;
         const userPass = password || 'password123';
-        const userName = name || 'Industrial Ops';
+        const userName = name || (selectedRole === 'owner' ? 'Texas Heavy Equipment Co.' : 'John D. Construction');
         await signup(userEmail, userPass, userName, selectedRole, phone);
       } else {
-        const userEmail = email || 'contractor@equiphub.com';
+        const userEmail = email || `${selectedRole}@equiphub.com`;
         const userPass = password || 'password123';
         await login(userEmail, userPass, selectedRole);
       }
-
-      switchRole(selectedRole);
-      navigateTo('dashboard');
     } catch (err) {
-      console.warn("Auth info:", err);
-      // Fallback smooth login guarantee
       switchRole(selectedRole);
-      navigateTo('dashboard');
     } finally {
       setLoading(false);
+      navigateTo('dashboard');
     }
   };
 
@@ -64,21 +56,18 @@ export default function LoginScreen({ navigateTo }) {
     setLoading(true);
     try {
       await googleSignIn(selectedRole);
-      switchRole(selectedRole);
-      navigateTo('dashboard');
     } catch (err) {
-      console.warn("Google Signin info:", err);
       switchRole(selectedRole);
-      navigateTo('dashboard');
     } finally {
       setLoading(false);
+      navigateTo('dashboard');
     }
   };
 
   return (
     <div className="bg-background text-on-background antialiased min-h-screen flex flex-col items-center justify-center p-4 md:p-12 w-full">
       <main className="w-full max-w-4xl mx-auto flex flex-col md:flex-row gap-8 md:items-stretch">
-        {/* Authentication Box (Left/Top) */}
+        {/* Authentication Form Box (Left/Top) */}
         <section className="flex-1 bg-surface-container-lowest border border-outline-variant rounded-lg p-6 md:p-8 shadow-sm flex flex-col justify-center">
           <div className="mb-4 text-center md:text-left">
             <h1 
@@ -92,14 +81,14 @@ export default function LoginScreen({ navigateTo }) {
             </p>
           </div>
 
-          {/* Quick Demo Access Bar */}
+          {/* Quick Demo Access Buttons */}
           <div className="mb-4 p-3 bg-surface-container-low border border-outline-variant/60 rounded-lg flex flex-col gap-2">
             <span className="font-label-caps text-[11px] text-on-surface-variant uppercase font-bold">1-Click Instant Demo Login:</span>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => handleInstantLogin('contractor')}
-                className="py-2 px-3 bg-primary-container text-on-primary-container font-bold text-xs rounded hover:bg-inverse-primary transition-colors flex items-center justify-center gap-1 shadow-sm"
+                className="py-2.5 px-3 bg-primary-container text-on-primary-container font-bold text-xs rounded hover:bg-inverse-primary transition-colors flex items-center justify-center gap-1 shadow-sm cursor-pointer"
               >
                 <span className="material-symbols-outlined text-sm">construction</span>
                 Contractor View
@@ -107,7 +96,7 @@ export default function LoginScreen({ navigateTo }) {
               <button
                 type="button"
                 onClick={() => handleInstantLogin('owner')}
-                className="py-2 px-3 bg-on-background text-on-primary font-bold text-xs rounded hover:bg-inverse-surface transition-colors flex items-center justify-center gap-1 shadow-sm"
+                className="py-2.5 px-3 bg-on-background text-on-primary font-bold text-xs rounded hover:bg-inverse-surface transition-colors flex items-center justify-center gap-1 shadow-sm cursor-pointer"
               >
                 <span className="material-symbols-outlined text-sm">precision_manufacturing</span>
                 Owner Studio
@@ -118,6 +107,7 @@ export default function LoginScreen({ navigateTo }) {
           {/* Mode Tabs */}
           <div className="flex border-b border-outline-variant mb-4">
             <button
+              type="button"
               onClick={() => { setAuthMode('signin'); setErrorMsg(''); }}
               className={`flex-1 py-2 font-label-caps text-xs font-bold text-center border-b-2 transition-colors ${
                 authMode === 'signin' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant'
@@ -126,6 +116,7 @@ export default function LoginScreen({ navigateTo }) {
               Sign In
             </button>
             <button
+              type="button"
               onClick={() => { setAuthMode('signup'); setErrorMsg(''); }}
               className={`flex-1 py-2 font-label-caps text-xs font-bold text-center border-b-2 transition-colors ${
                 authMode === 'signup' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant'
@@ -209,7 +200,7 @@ export default function LoginScreen({ navigateTo }) {
             <button 
               type="submit"
               disabled={loading}
-              className="industrial-button rounded-lg py-3 px-6 font-bold text-on-primary-fixed text-center w-full shadow-sm hover:shadow-md transition-all mt-2 flex items-center justify-center gap-2"
+              className="industrial-button rounded-lg py-3 px-6 font-bold text-on-primary-fixed text-center w-full shadow-sm hover:shadow-md transition-all mt-2 flex items-center justify-center gap-2 cursor-pointer"
             >
               {loading ? (
                 <div className="loader" />
@@ -229,7 +220,7 @@ export default function LoginScreen({ navigateTo }) {
             type="button"
             onClick={handleGoogleAuth}
             disabled={loading}
-            className="bg-surface border-2 border-outline-variant rounded-lg py-2.5 px-4 font-semibold text-on-surface flex items-center justify-center gap-2 hover:bg-surface-container-low transition-colors w-full text-xs"
+            className="bg-surface border-2 border-outline-variant rounded-lg py-2.5 px-4 font-semibold text-on-surface flex items-center justify-center gap-2 hover:bg-surface-container-low transition-colors w-full text-xs cursor-pointer"
           >
             <span className="material-symbols-outlined text-on-surface">login</span>
             Continue with Google
@@ -249,9 +240,10 @@ export default function LoginScreen({ navigateTo }) {
 
           <div className="flex flex-col gap-4 h-full justify-center">
             {/* Contractor Card */}
-            <div 
+            <button 
+              type="button"
               onClick={() => handleInstantLogin('contractor')}
-              className="industrial-card rounded-lg p-5 border-2 border-transparent hover:border-primary-container transition-all text-left flex flex-col gap-2 group cursor-pointer shadow-md"
+              className="industrial-card rounded-lg p-5 border-2 border-transparent hover:border-primary-container transition-all text-left flex flex-col gap-2 group cursor-pointer shadow-md w-full"
             >
               <div className="flex items-center gap-3">
                 <div className="bg-surface-tint/20 p-2.5 rounded-full text-primary-container">
@@ -268,12 +260,13 @@ export default function LoginScreen({ navigateTo }) {
               <div className="pt-2 flex items-center text-primary-container font-label-caps text-xs font-bold group-hover:translate-x-1 transition-transform">
                 Launch Contractor Dashboard <span className="material-symbols-outlined ml-1 text-xs">arrow_forward</span>
               </div>
-            </div>
+            </button>
 
             {/* Owner Card */}
-            <div 
+            <button 
+              type="button"
               onClick={() => handleInstantLogin('owner')}
-              className="industrial-card rounded-lg p-5 border-2 border-transparent hover:border-primary-container transition-all text-left flex flex-col gap-2 group cursor-pointer shadow-md"
+              className="industrial-card rounded-lg p-5 border-2 border-transparent hover:border-primary-container transition-all text-left flex flex-col gap-2 group cursor-pointer shadow-md w-full"
             >
               <div className="flex items-center gap-3">
                 <div className="bg-surface-tint/20 p-2.5 rounded-full text-primary-container">
@@ -285,12 +278,12 @@ export default function LoginScreen({ navigateTo }) {
                 </div>
               </div>
               <p className="text-xs text-secondary-fixed-dim leading-relaxed">
-                List machinery assets (CRUD), review pending contractor booking requests, approve or dispatch to site, and track revenue analytics.
+                List machinery assets (CRUD), review pending contractor booking requests, approve or dispatch machines to site, and track revenue analytics.
               </p>
               <div className="pt-2 flex items-center text-primary-container font-label-caps text-xs font-bold group-hover:translate-x-1 transition-transform">
                 Launch Owner Studio <span className="material-symbols-outlined ml-1 text-xs">arrow_forward</span>
               </div>
-            </div>
+            </button>
           </div>
         </section>
       </main>

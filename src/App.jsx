@@ -22,7 +22,15 @@ import { INITIAL_EQUIPMENT, INITIAL_BOOKINGS } from './data/equipmentData';
 function MainApp() {
   const { userProfile, userRole } = useAuth();
 
-  const [activeScreen, setActiveScreen] = useState('splash');
+  const [activeScreen, setActiveScreen] = useState(() => {
+    const saved = localStorage.getItem('equiphub_active_screen');
+    const savedUser = localStorage.getItem('equiphub_user');
+    if (saved && saved !== 'splash' && saved !== 'onboarding') {
+      return saved;
+    }
+    return savedUser ? 'dashboard' : 'splash';
+  });
+
   const [equipmentList, setEquipmentList] = useState(INITIAL_EQUIPMENT);
   const [bookingsList, setBookingsList] = useState(INITIAL_BOOKINGS);
   const [selectedEquipment, setSelectedEquipment] = useState(INITIAL_EQUIPMENT[0]);
@@ -50,6 +58,7 @@ function MainApp() {
 
   const navigateTo = (screenName) => {
     setActiveScreen(screenName);
+    localStorage.setItem('equiphub_active_screen', screenName);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 

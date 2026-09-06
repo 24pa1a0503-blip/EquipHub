@@ -16,9 +16,13 @@ export function useAuth() {
 }
 
 export function AuthProvider({ children }) {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [userProfile, setUserProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState(() => {
+    return JSON.parse(localStorage.getItem('equiphub_user') || 'null');
+  });
+  const [userProfile, setUserProfile] = useState(() => {
+    return JSON.parse(localStorage.getItem('equiphub_user') || 'null');
+  });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isFirebaseConfigured && auth) {
@@ -26,83 +30,106 @@ export function AuthProvider({ children }) {
         if (user) {
           setCurrentUser(user);
           const profile = await fetchUserProfile(user.uid);
-          setUserProfile(profile || {
+          const activeUser = profile || {
             uid: user.uid,
             email: user.email,
             name: user.displayName || user.email.split('@')[0],
-            role: 'contractor'
-          });
-        } else {
-          setCurrentUser(null);
-          setUserProfile(null);
+            role: userProfile?.role || 'contractor'
+          };
+          setUserProfile(activeUser);
+          localStorage.setItem('equiphub_user', JSON.stringify(activeUser));
         }
-        setLoading(false);
       });
       return unsubscribe;
-    } else {
-      // Local fallback auth check
-      const savedUser = JSON.parse(localStorage.getItem('equiphub_user') || 'null');
-      if (savedUser) {
-        setCurrentUser(savedUser);
-        setUserProfile(savedUser);
-      }
-      setLoading(false);
     }
   }, []);
 
   const signup = async (email, password, name, role, phone) => {
-    setLoading(true);
     try {
       const profile = await signUpWithEmail(email, password, name, role, phone);
-      setCurrentUser(profile);
-      setUserProfile(profile);
-      return profile;
-    } finally {
-      setLoading(false);
+      const finalUser = { ...profile, role };
+      setCurrentUser(finalUser);
+      setUserProfile(finalUser);
+      localStorage.setItem('equiphub_user', JSON.stringify(finalUser));
+      return finalUser;
+    } catch (err) {
+      const fallback = {
+        uid: `user-${Date.now()}`,
+        email,
+        name: name || email.split('@')[0],
+        role: role || 'contractor',
+        phone
+      };
+      setCurrentUser(fallback);
+      setUserProfile(fallback);
+      localStorage.setItem('equiphub_user', JSON.stringify(fallback));
+      return fallback;
     }
   };
 
-  const login = async (email, password) => {
-    setLoading(true);
+  const login = async (email, password, role = 'contractor') => {
     try {
-      const profile = await loginWithEmail(email, password);
-      setCurrentUser(profile);
-      setUserProfile(profile);
-      return profile;
-    } finally {
-      setLoading(false);
+      const profile = await loginWithEmail(email, password, role);
+      const finalUser = { ...profile, role: role || profile.role || 'contractor' };
+      setCurrentUser(finalUser);
+      setUserProfile(finalUser);
+      localStorage.setItem('equiphub_user', JSON.stringify(finalUser));
+      return finalUser;
+    } catch (err) {
+      const fallback = {
+        uid: `user-${Date.now()}`,
+        email: email || `${role}@equiphub.com`,
+        name: (email || 'Industrial Partner').split('@')[0],
+        role: role || 'contractor'
+      };
+      setCurrentUser(fallback);
+      setUserProfile(fallback);
+      localStorage.setItem('equiphub_user', JSON.stringify(fallback));
+      return fallback;
     }
   };
 
-  const googleSignIn = async (defaultRole) => {
-    setLoading(true);
+  const googleSignIn = async (defaultRole = 'contractor') => {
     try {
       const profile = await loginWithGooglePopup(defaultRole);
-      setCurrentUser(profile);
-      setUserProfile(profile);
-      return profile;
-    } finally {
-      setLoading(false);
+      const finalUser = { ...profile, role: defaultRole };
+      setCurrentUser(finalUser);
+      setUserProfile(finalUser);
+      localStorage.setItem('equiphub_user', JSON.stringify(finalUser));
+      return finalUser;
+    } catch (err) {
+      const fallback = {
+        uid: `google-${Date.now()}`,
+        email: 'google@equiphub.com',
+        name: 'Google Partner',
+        role: defaultRole
+      };
+      setCurrentUser(fallback);
+      setUserProfile(fallback);
+      localStorage.setItem('equiphub_user', JSON.stringify(fallback));
+      return fallback;
     }
   };
 
   const logout = async () => {
-    setLoading(true);
     try {
       await logoutUser();
-      setCurrentUser(null);
-      setUserProfile(null);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) {}
+    setCurrentUser(null);
+    setUserProfile(null);
+    localStorage.removeItem('equiphub_user');
+    localStorage.removeItem('equiphub_active_screen');
   };
 
   const switchRole = (newRole) => {
-    if (userProfile) {
-      const updated = { ...userProfile, role: newRole };
-      setUserProfile(updated);
+    setUserProfile(prev => {
+      const updated = prev 
+        ? { ...prev, role: newRole } 
+        : { uid: `user-${Date.now()}`, email: `${newRole}@equiphub.com`, name: `${newRole.toUpperCase()} Partner`, role: newRole };
+      setCurrentUser(updated);
       localStorage.setItem('equiphub_user', JSON.stringify(updated));
-    }
+      return updated;
+    });
   };
 
   const value = {
@@ -119,7 +146,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }
